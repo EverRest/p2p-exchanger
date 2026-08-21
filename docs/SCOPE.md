@@ -92,7 +92,7 @@ Assisted settlement with mandatory state machine, idempotency, ledger, audit, ki
 |------|-------|
 | **viewer** | Read-only orders, audit, dashboards |
 | **operator** | `confirm_payment`, `approve_payout`, exception queue |
-| **admin** | Kill-switch, platform settings, fee/config, operator user management |
+| **admin** | Kill-switch, platform settings, fee/config, operator user management, **KYC approve/reject** (MVP) |
 
 ## Client channels (decided)
 
