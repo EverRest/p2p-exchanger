@@ -165,6 +165,8 @@ H7  Handbook DoD green → writing-plans / feature tasks.md
 
 ## 13. Handbook Definition of Done
 
+**Handbook completed:** 2026-08-21
+
 - [ ] No contradictions: product ↔ SCOPE ↔ specs/001 ↔ this design  
 - [ ] SECURITY covers AI, secrets, Assisted, RBAC, KYC  
 - [ ] State machine + workflows documented  

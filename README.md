@@ -4,12 +4,15 @@ Client↔platform currency/asset exchange. **Spec-driven** ([Spec Kit](https://g
 
 ## Status
 
-**Repository preparation** — product specs and DevOps are in place; feature implementation starts later from `specs/001-exchange-platform/tasks.md`.
+**Handbook prep complete** — domain, workflows, security, and product docs are aligned to design v0.3. Feature implementation starts from [`specs/001-exchange-platform/tasks.md`](specs/001-exchange-platform/tasks.md).
 
 ## Quick links
 
 | Doc | Purpose |
 |-----|---------|
+| [docs/README.md](docs/README.md) | Handbook reading order (start here) |
+| [docs/superpowers/specs/2026-08-21-p2p-exchanger-design.md](docs/superpowers/specs/2026-08-21-p2p-exchanger-design.md) | Locked design v0.3 |
+| [docs/SECURITY.md](docs/SECURITY.md) | Funds, secrets, AI isolation, RBAC |
 | [AGENTS.md](AGENTS.md) | Agent playbook + principles |
 | [docs/coding-standards.md](docs/coding-standards.md) | DDD, TDD, SOLID, DRY, KISS |
 | [docs/patterns.md](docs/patterns.md) | Design patterns for flexibility |
@@ -33,9 +36,11 @@ Node **22** (`.nvmrc`).
 
 ## Architecture (target)
 
+**Assisted settlement:** payment detection may auto; operator **confirm payment** and **approve payout** are mandatory for money movement.
+
 ```text
-React (Vite) + Telegram bot → NestJS API → PostgreSQL
-                                    ↓
-                              Redis/BullMQ → Privileged worker
-                                             (Binance + hot wallet secrets)
+React (Vite) + Telegram bot (grammY) → NestJS API → PostgreSQL
+                                              ↓
+                                        Redis/BullMQ → Privileged worker
+                                                       (Binance + hot wallet secrets only)
 ```

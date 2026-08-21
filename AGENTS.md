@@ -4,9 +4,13 @@ Canonical instructions for AI coding agents working on **p2p-exchanger**.
 
 Client↔platform exchange (not a peer marketplace). Stack and DX mirror **transl8.ai**: NestJS modular monolith + privileged BullMQ worker, React+Vite, PostgreSQL+Prisma, Redis.
 
-> **Current phase:** repository & Spec Kit preparation. Feature implementation starts later from `specs/001-exchange-platform/tasks.md`. Do not invent product code outside agreed specs.
+> **Current phase:** handbook complete. Implement features from [`specs/001-exchange-platform/tasks.md`](specs/001-exchange-platform/tasks.md). Do not invent product code outside agreed specs.
 
-> **Rule:** Read `.specify/memory/constitution.md`, `docs/coding-standards.md`, and `docs/patterns.md` before coding. If you cannot explain the change with domain + workflow docs in 60 seconds, you do not understand it yet.
+> **Source of truth:** this repo only — **ignore `p2p-docs`** for decisions.
+
+> **Rule:** Before coding, read `.specify/memory/constitution.md`, `docs/coding-standards.md`, `docs/patterns.md`, [`docs/SECURITY.md`](docs/SECURITY.md), [design v0.3](docs/superpowers/specs/2026-08-21-p2p-exchanger-design.md), and the relevant `docs/domain/` + `docs/workflows/` files. If you cannot explain the change in 60 seconds, you do not understand it yet.
+
+> **Stack locks:** Node **22**; Telegram bot via **grammY** (thin client → API). **Assisted settlement:** detect may auto; operator confirm payment + approve payout only for money movement.
 
 ---
 
@@ -16,8 +20,8 @@ Client↔platform exchange (not a peer marketplace). Stack and DX mirror **trans
 You are a senior engineer on p2p-exchanger (NestJS CQRS modular monolith + React + privileged worker).
 
 BEFORE writing code:
-1. Read constitution + docs/coding-standards.md + docs/patterns.md
-2. Read relevant specs/001-exchange-platform/* and docs/domain|workflows when they exist
+1. Read constitution + docs/coding-standards.md + docs/patterns.md + docs/SECURITY.md
+2. Read design v0.3 + relevant docs/domain/* + docs/workflows/* + specs/001-exchange-platform/*
 3. Find an existing similar handler/component (prefer transl8.ai patterns)
 4. Plan the smallest correct diff (KISS, DRY, SOLID, YAGNI)
 5. If more than one reasonable approach exists, propose options and ask
@@ -37,7 +41,7 @@ WHEN done:
 - Bump VERSION only when shipping product behavior (see Versioning)
 ```
 
-**Spec-driven:** `specs/` + future `docs/domain|workflows` are the specification. Drift between docs and code → ask which is stale.
+**Spec-driven:** `docs/` handbook + `specs/` are the specification. Drift between docs and code → ask which is stale. Do not update `p2p-docs`.
 
 ---
 
@@ -121,9 +125,16 @@ Bump on product commits via `./scripts/bump-version.sh` (patch +1; if patch ≥ 
 
 | Doc | Purpose |
 |-----|---------|
+| [docs/README.md](docs/README.md) | Handbook reading order |
+| [docs/superpowers/specs/2026-08-21-p2p-exchanger-design.md](docs/superpowers/specs/2026-08-21-p2p-exchanger-design.md) | Locked design v0.3 |
 | [.specify/memory/constitution.md](.specify/memory/constitution.md) | Governance |
 | [docs/coding-standards.md](docs/coding-standards.md) | Naming, layers, TDD/SOLID/DDD practice |
 | [docs/patterns.md](docs/patterns.md) | CQRS, providers, outbox, saga, idempotency |
+| [docs/SECURITY.md](docs/SECURITY.md) | Funds, secrets, AI isolation, RBAC |
+| [docs/system-overview.md](docs/system-overview.md) | Processes & trust boundaries |
+| [docs/architecture.md](docs/architecture.md) | Modules & data flow |
+| [docs/domain/](docs/domain/) | Domain model |
+| [docs/workflows/](docs/workflows/) | Customer & operator flows |
 | [docs/DEVELOPMENT-DIRECTION.md](docs/DEVELOPMENT-DIRECTION.md) | Reuse from transl8.ai |
 | [docs/SCOPE.md](docs/SCOPE.md) | Product decisions |
 | [specs/001-exchange-platform/](specs/001-exchange-platform/) | Spec, plan, tasks |
