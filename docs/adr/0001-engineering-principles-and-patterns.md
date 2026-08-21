@@ -25,3 +25,10 @@ patterns that keep liquidity/payment rails swappable.
 - Reviews can reject PRs that violate privilege isolation or use `number` for money.  
 - Agents default to TDD on money paths.  
 - Transl8.ai remains the structural reference for Nest/worker/DX.
+
+## See also
+
+- [0002-assisted-settlement.md](./0002-assisted-settlement.md) — operator confirm/approve gates  
+- [0003-kyc-before-orders.md](./0003-kyc-before-orders.md) — KYC VERIFIED before orders  
+- [0004-privilege-separation-worker.md](./0004-privilege-separation-worker.md) — worker-only secrets  
+- [0005-ai-explain-only.md](./0005-ai-explain-only.md) — AI copy without tools or PII
