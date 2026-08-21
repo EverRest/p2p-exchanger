@@ -1,47 +1,71 @@
-# P2P Exchanger — Design (v0.2)
+# P2P Exchanger — Design (v0.3)
 
 Date: 2026-08-21  
 Status: brainstorm sections approved; awaiting user review of this written spec  
-Supersedes: v0.1 (mostly-automatic settlement; 2–3 UAH methods; KYC deferred)  
-Sources: brainstorm decisions, `docs/SCOPE.md` (to sync), Spec Kit `specs/001-exchange-platform/`
+Supersedes: v0.2  
+Sources: brainstorm (prep-for-implementation), exchanger SoT only (`p2p-docs` ignored)
 
 ## 1. Problem
 
-Build a **client ↔ platform** currency/asset exchanger (not a peer marketplace) supporting fiat↔crypto, crypto↔crypto, and (later) fiat↔fiat, with **Assisted** settlement: automation where safe, **mandatory human confirmation** for payment confirm and payout approve, and strict isolation of secrets and AI.
+Build a **client ↔ platform** currency/asset exchanger (not a peer marketplace) supporting fiat↔crypto, crypto↔crypto, and (later) fiat↔fiat, with **Assisted** settlement, mandatory operator confirm/approve for money movement, strict KYC before orders, and hard isolation of secrets and AI.
 
 ## 2. Goals
 
-- One generic order/quote/ledger engine for all pair types  
-- Launch corridors: **USDT ↔ UAH** and **USDT ↔ BTC** (both directions)  
-- Rails: USDT **TRC20 + ERC20**; BTC mainnet; UAH methods **Card, IBAN, Monobank, PrivatBank** (config-driven)  
-- Liquidity: **Binance primary**, **hot wallet fallback** via provider ports  
-- Channels: **Web + Telegram (grammY)** → same API/domain + **Admin**  
-- **KYC VERIFIED required before any order** (`KycProvider` port + mock + one real adapter later)  
-- Auth: **email or phone** (verified); step-up OTP on sensitive changes; Telegram links to same Customer  
-- Engineering DNA from **transl8.ai**: Nest modular monolith, CQRS/DDD, privileged BullMQ worker, providers, docs/ADR, TDD  
-- **Full handbook first** (Approach 3): complete English documentation before feature implementation  
+- Generic order/quote/ledger engine for pair types A/B/C  
+- Launch: **USDT ↔ UAH**, **USDT ↔ BTC**; USDT TRC20+ERC20; BTC mainnet  
+- UAH methods: **Card, IBAN, Monobank, PrivatBank**  
+- Liquidity: Binance primary, hot wallet fallback (ports)  
+- Web + **grammY** Telegram + Admin; same API/domain  
+- KYC VERIFIED before any order (`KycProvider`; vendor TBD; MVP mock + admin manual)  
+- Auth: email **or** phone; step-up OTP on sensitive changes  
+- Client UI **UK + EN**; locale from Accept-Language / Telegram `language_code`, fallback **uk**  
+- AI explain/copy **in MVP** (feature flag; prod default **on** if API key present); no tools/DB/PII  
+- Admin RBAC: **viewer / operator / admin**  
+- transl8.ai engineering DNA; **Node 22**  
+- **Full handbook first**, then sync specs, then feature code  
 
-## 3. Non-goals (v1 / handbook phase)
+## 3. Non-goals (handbook + early MVP)
 
-Microservices/K8s, many venues, mobile apps, peer-offer matching, AI with tools or DB/API access, full multi-tenant SaaS billing, legal opinions, production key-ceremony runbooks, complete OpenAPI YAML (stubs OK).
+Microservices/K8s, many venues, mobile apps, peer marketplace, AI with tools or data access, touching **`p2p-docs`**, legal opinions, production key ceremony, complete OpenAPI YAML, fixed min/max order amounts (config placeholders only).
 
-## 4. Locked product decisions (brainstorm)
+## 4. Locked decisions
 
 | Topic | Decision |
 |-------|----------|
-| Documentation language | **English only** |
-| Product docs | **Rewrite** `docs/product/*` to match this design (not archive-only) |
-| Documentation delivery | **Full handbook** before feature code |
-| Settlement posture | **Assisted**: detection may be automatic; **confirm payment** and **approve payout** always require operator (RBAC) |
-| Quote TTL | **120 seconds** |
-| Order payment window | **30 minutes** (`AWAITING_PAYMENT` → else `EXPIRED`) |
-| UAH methods | **Card + IBAN + Monobank + PrivatBank** |
-| KYC | **Strict before any order**; port `KycProvider` + mock + one real adapter (vendor TBD) |
-| Web auth | Email **or** phone; step-up OTP for payout destination change, Telegram link, sensitive profile |
-| Node | **22** (align plan/CI/docs with `.nvmrc`) |
-| Telegram library | **grammY** |
-| AI | Explain/copy only; sanitized allowlisted context; no tools; no PII/DB; never invent payment confirmation |
-| `PAYOUT_APPROVED` | **Order-visible status** (not only payout sub-state) |
+| SoT repo | **`p2p-exchanger` only**; do not update `p2p-docs` |
+| Docs language | English only |
+| Product docs | Rewrite `docs/product/*` from this design |
+| Prep approach | **Handbook → sync specs/001 → code** |
+| Settlement | **Assisted**: detect may auto; **confirm payment** + **approve payout** = operator only |
+| Quote TTL | **120s** |
+| Payment window | **30 min** |
+| UAH methods | Card, IBAN, Monobank, PrivatBank |
+| Min/max amounts | Config placeholders (no fixed numbers in docs) |
+| Fee defaults | See §4.1 |
+| KYC | Before order; vendor **TBD**; mock + manual admin approve |
+| Auth | Email or phone + step-up OTP |
+| i18n | UK + EN; detect locale; fallback **uk** |
+| AI explain | In MVP; flag; prod **on** if key; allowlisted context only |
+| RBAC | viewer / operator / admin |
+| Node | **22** |
+| Bot | **grammY** |
+| `PAYOUT_APPROVED` | Order-visible status |
+
+### 4.1 Fee defaults (config; admin-editable)
+
+| Corridor | Spread | Service fee | Notes |
+|----------|--------|-------------|--------|
+| USDT ↔ UAH | **1.0%** | **0.2%** | Network fees for USDT via `network_fee_usdt_trc20` / `_erc20` placeholders |
+| USDT ↔ BTC | **0.8%** | **0.2%** | BTC network fee from provider estimate; snapshot on quote |
+
+| UAH payment fee | Rate |
+|-----------------|------|
+| Card | **0.5%** |
+| IBAN | **0%** |
+| Monobank | **0%** |
+| PrivatBank | **0%** |
+
+**Minimum absolute service fee:** equivalent of **10 UAH** on small orders (config).
 
 ## 5. Architecture
 
@@ -60,149 +84,106 @@ React (Vite) web + Admin     Telegram bot (grammY, thin)
          (Binance + hot wallet keys ONLY)
 ```
 
-| Process | May hold | Must not hold |
-|---------|----------|----------------|
-| Web / Bot | Session / bot token / linked API tokens | DB as SoT, wallet keys, exchange secrets |
-| API | DB creds, business rules, enqueue jobs, KYC flow | Hot-wallet keys, Binance signing secrets |
-| Worker | Exchange + wallet secrets; detect/route/payout jobs | Customer UI session as authority |
-| AI layer | Allowlisted sanitized prompt fields only | DB, APIs, tools, raw PII, balances |
+| Process | May hold | Must not |
+|---------|----------|----------|
+| Web / Bot | Session / bot token | Wallet keys, exchange secrets, DB as SoT |
+| API | DB, rules, enqueue, KYC orchestration | Hot-wallet / Binance signing secrets |
+| Worker | Exchange + wallet secrets; detect/route/payout | Customer session as authority |
+| AI | Allowlisted sanitized prompt fields | DB, APIs, tools, raw PII |
 
-Cross-module: **domain events**. Long work **never** on HTTP thread.
+## 6. Security (summary → `docs/SECURITY.md`)
 
-## 6. Security (handbook core)
-
-See planned `docs/SECURITY.md`. Summary:
-
-- Trust boundaries as in §5  
-- AI: no function-calling; allowlisted context only; feature-flagged  
-- Funds: state machine only; ledger + audit with money transitions; idempotency on detect/execute  
-- Assisted: customer “I paid” may start detect — **not** final confirm  
-- Kill-switch; RBAC on admin actions; masked destinations in logs; rate limits on auth/OTP/explain  
+- Trust boundaries §5  
+- AI: no function-calling; allowlist only; never invent payment confirmation  
+- Assisted: “I paid” ≠ final confirm  
+- State machine + ledger + audit + idempotency  
+- Kill-switch; RBAC; masked logs; rate limits on auth/OTP/explain  
 
 ## 7. Domain & Assisted lifecycle
 
 **Entities:** Customer, KycCase, ExchangePair, PaymentMethod, Quote, Order, Payment, Payout, LedgerEntry, AuditEvent, ExceptionCase, PlatformSettings, OperatorUser.
 
-**Happy path (Assisted):**
-
 ```text
-CREATED
-  → AWAITING_PAYMENT
-  → PAYMENT_DETECTED          (system/mock/watcher)
-  → PAYMENT_CONFIRMED         ★ operator only
-  → PROCESSING
-  → PAYOUT_PENDING
-  → PAYOUT_APPROVED           ★ operator only (order-visible)
-  → COMPLETED                 (after worker execute success)
+CREATED → AWAITING_PAYMENT → PAYMENT_DETECTED
+  → PAYMENT_CONFIRMED ★operator → PROCESSING → PAYOUT_PENDING
+  → PAYOUT_APPROVED ★operator → COMPLETED
 ```
 
-**Terminals:** `EXPIRED | CANCELLED | REFUNDED | FAILED`  
-**Side-path:** mismatch / risk / payout failure → exception queue (no auto payout).
+Terminals: `EXPIRED | CANCELLED | REFUNDED | FAILED`  
+Exceptions: mismatch/risk/failed payout → queue (no auto payout).
 
-**Gates on order create:** valid unexpired quote + KYC VERIFIED + kill-switch off + limits OK.
+**Order create gates:** unexpired quote + KYC VERIFIED + kill-switch off + limits OK.
 
-**Pricing:** market → spread → fees → final amounts; all stored on immutable Quote and copied to Order.
+## 8. Providers
 
-## 8. Provider layer
+`RateProvider`, `ExchangeProvider`, `PaymentProvider`, `PayoutProvider`, `KycProvider` (mock + TBD real). Domain never imports SDKs.
 
-| Port | Launch adapters |
-|------|-----------------|
-| `RateProvider` | Binance (mock for early e2e) |
-| `ExchangeProvider` | Binance, HotWallet |
-| `PaymentProvider` | UAH rails + crypto deposit watchers (mock first) |
-| `PayoutProvider` | Bank / crypto via exchange or wallet |
-| `KycProvider` | Mock + one real adapter (vendor TBD) |
-
-Domain never imports vendor SDKs.
-
-## 9. Stack (locked)
+## 9. Stack
 
 | Layer | Choice |
 |-------|--------|
-| Frontend | React + Vite + TS + Tailwind + TanStack Query |
+| Frontend | React + Vite + TS + Tailwind + TanStack Query + i18n (uk/en) |
 | API | NestJS + CQRS + Prisma + PostgreSQL |
-| Worker | Separate Nest context + BullMQ |
-| Bot | **grammY** → API only |
-| Runtime | **Node 22** |
-| DX | Makefile, Docker Compose, ADRs, AGENTS.md, Spec Kit |
+| Worker | Nest + BullMQ |
+| Bot | grammY → API |
+| Runtime | Node **22** |
 
-## 10. Handbook documentation map (Approach 3)
+## 10. Handbook map
+
+Unchanged from v0.2 file tree under `docs/` (SECURITY, system-overview, architecture, domain/*, workflows/*, product rewrite, ADRs 0002–0005). Sync `specs/001-exchange-platform/*`, root README, AGENTS.md.
+
+## 11. Prep execution order (Approach 1)
 
 ```text
-docs/
-├── README.md                 # reading order
-├── SCOPE.md                  # sync to this design
-├── SECURITY.md               # NEW
-├── system-overview.md        # NEW
-├── architecture.md           # NEW
-├── DEVELOPMENT-DIRECTION.md  # minor sync
-├── coding-standards.md / patterns.md / ci.md / deploy/
-├── product/                  # REWRITE all EN
-│   ├── idea.md, mvp.md, design.md, roadmap.md, spec.md
-├── domain/                   # NEW
-│   ├── overview.md, money.md, quote-and-pricing.md
-│   ├── order-state-machine.md, payment-and-payout.md
-│   ├── ledger.md, risk-and-limits.md, kyc.md, audit.md
-├── workflows/                # NEW
-│   ├── customer-exchange.md, operator-exception.md
-│   ├── kyc-onboarding.md, kill-switch.md
-└── adr/
-    ├── 0001 (sync)
-    ├── 0002-assisted-settlement.md
-    ├── 0003-kyc-before-orders.md
-    ├── 0004-privilege-separation-worker.md
-    └── 0005-ai-explain-only.md
+H0  This design v0.3 committed
+H1  SECURITY + system-overview + architecture
+H2  domain/* + workflows/*
+H3  Rewrite docs/product/* (EN)
+H4  ADRs 0002–0005 (+ sync 0001)
+H5  Sync SCOPE.md + specs/001/*
+H6  docs/README.md + root README + AGENTS.md
+H7  Handbook DoD green → writing-plans / feature tasks.md
 ```
 
-Also sync: `specs/001-exchange-platform/*`, root `README.md`, `AGENTS.md`.
+### Spec sync deltas (H5)
 
-**Write order:** SECURITY + system-overview → domain → workflows → product rewrite → ADRs → SCOPE/design already here → specs/001 → indexes.
+- Assisted + KYC gate + PAYOUT_APPROVED  
+- Remove SC “≥95% without operator”; use operator-attributed confirms/approves + idempotency + explain safety  
+- Fees §4.1; i18n; RBAC; Node 22; grammY  
+- KYC endpoints + admin confirm/approve + explain in contracts  
+- tasks.md: KYC foundation; Assisted US1; Phase 1 scaffold marked realistically  
 
-**Placeholders OK:** vendor KYC name, BTC exact min amounts, full OpenAPI file, production key ceremony.
+## 12. Delivery after handbook
 
-## 11. Delivery phases
-
-0. **Handbook** (this design) — DoD below; **no feature domain code until Done**  
-1. Foundation (Money, state machine, ledger, providers mocks, auth, KYC port, admin shell)  
-2. US1 USDT↔UAH Assisted path on web  
+1. Foundation (Money, state machine, ledger, mocks, auth, KYC port, admin RBAC shell)  
+2. US1 USDT↔UAH Assisted on web (+ explain with flag)  
 3. US2 USDT↔BTC  
-4. Telegram parity + explain layer  
-5. Operator exceptions polish  
-6. Fiat↔fiat config enablement  
-7. Real Binance / hot wallet / KYC adapters  
+4. Telegram parity  
+5. Exceptions polish  
+6. Fiat↔fiat config  
+7. Real Binance / hot wallet / KYC vendor adapter  
 
-## 12. Handbook Definition of Done
+## 13. Handbook Definition of Done
 
-- [ ] No contradictions between product, SCOPE, and `specs/001`  
-- [ ] Security / AI / privilege rules unambiguous  
-- [ ] Assisted path + state machine documented  
-- [ ] KYC-before-order + `KycProvider` documented  
-- [ ] Launch methods, corridors, TTL, payment window, auth, bot, Node documented  
-- [ ] `AGENTS.md` / `docs/README.md` point at handbook reading order  
-- [ ] `docs/product/*` rewritten in English to match this design  
+- [ ] No contradictions: product ↔ SCOPE ↔ specs/001 ↔ this design  
+- [ ] SECURITY covers AI, secrets, Assisted, RBAC, KYC  
+- [ ] State machine + workflows documented  
+- [ ] Fee defaults + i18n + Node 22 + grammY documented  
+- [ ] `docs/product/*` English rewrite complete  
+- [ ] Indexes point to handbook; `p2p-docs` not SoT  
+- [ ] tasks.md ready for Assisted implementation  
 
-After DoD → implementation plan (`writing-plans`) → execute `tasks.md`.
+**Out of prep:** feature code, KYC vendor pick, real keys, min/max numbers, `p2p-docs` changes.
 
-## 13. Success criteria adjustments (for spec sync)
+## 14. Open items (non-blocking)
 
-Replace “≥95% completed without operator” with Assisted-appropriate metrics, e.g.:
+- BTC/USDT min/max numeric values  
+- KYC vendor for real adapter  
+- Legal/licensing thresholds  
+- Exact median operator SLA numbers  
 
-- 100% of payment confirms and payout approves are operator-attributed in audit  
-- Zero double-payout in idempotency tests  
-- Median operator confirm/approve latency targets (ops-defined)  
-- Explain/help: zero false “payment received” claims in review samples  
+## 15. Next after user approves this file
 
-## 14. Open items (do not block handbook)
-
-- Exact BTC/USDT min/max amounts and address validation rule details  
-- KYC vendor selection for the real adapter  
-- Legal entity / licensing thresholds (policy plugs into KYC/limits)  
-- Fee/spread numeric defaults per corridor  
-
-## 15. Next step after user reviews this file
-
-1. Spec self-review complete (this document)  
-2. User approves this file  
-3. Invoke **writing-plans** for handbook implementation tasks  
-4. Execute handbook write + specs sync  
-5. Only then start feature code from `tasks.md`  
+1. Invoke **writing-plans** for H1–H7 handbook tasks  
+2. Execute handbook + specs sync  
+3. Then feature implementation from `tasks.md`  
