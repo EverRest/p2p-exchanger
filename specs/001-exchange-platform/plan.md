@@ -6,13 +6,13 @@
 
 ## Summary
 
-Deliver a client↔platform exchange with generic pairs (fiat↔crypto, crypto↔crypto, fiat↔fiat), launching **USDT↔UAH** and **USDT↔BTC**, mostly automatic settlement, Web + Telegram + admin. Implementation follows **transl8.ai** engineering: NestJS CQRS modular monolith, separate privileged BullMQ worker, Prisma/PostgreSQL, React+Vite frontend, provider ports with Binance primary + hot-wallet fallback.
+Deliver a client↔platform exchange with generic pairs (fiat↔crypto, crypto↔crypto, fiat↔fiat), launching **USDT↔UAH** and **USDT↔BTC**, **Assisted** settlement (operator confirm payment + approve payout on happy path), mandatory **KYC VERIFIED** before orders, Web + **grammY** Telegram + admin, UK+EN i18n. Implementation follows **transl8.ai** engineering: NestJS CQRS modular monolith, separate privileged BullMQ worker, Prisma/PostgreSQL, React+Vite frontend, provider ports with Binance primary + hot-wallet fallback.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x on Node.js 20+
+**Language/Version**: TypeScript 5.x on **Node 22**
 
-**Primary Dependencies**: NestJS (CQRS), Prisma, BullMQ, React 18+, Vite, TanStack Query, Zod (shared validation), grammY or Telegraf (Telegram bot), Pino
+**Primary Dependencies**: NestJS (CQRS), Prisma, BullMQ, React 18+, Vite, TanStack Query, Zod (shared validation), **grammY** (Telegram bot), i18n (uk/en), Pino
 
 **Storage**: PostgreSQL (source of truth), Redis (queue/cache only)
 
@@ -24,9 +24,11 @@ Deliver a client↔platform exchange with generic pairs (fiat↔crypto, crypto�
 
 **Performance Goals**: Quote create &lt; 2s p95 under normal load; status propagation to clients &lt; 30s (per SC-005); not aiming for HFT
 
-**Constraints**: Wallet/exchange secrets only in worker; no JS `number` for money; idempotent payment/payout; kill-switch; constitution gates
+**Constraints**: Wallet/exchange secrets only in worker; no JS `number` for money; idempotent payment/payout; kill-switch; constitution gates; **Assisted** operator confirm/approve; KYC gate on order create
 
-**Scale/Scope**: Single-operator desk MVP; launch 2 corridors × 2 directions; 2–3 UAH methods; USDT TRC20+ERC20; BTC mainnet; fiat↔fiat model ready but disabled
+**Scale/Scope**: Single-operator desk MVP; launch 2 corridors × 2 directions; 4 UAH methods (Card, IBAN, Monobank, PrivatBank); USDT TRC20+ERC20; BTC mainnet; fiat↔fiat model ready but disabled
+
+**Fee defaults** (config/admin-editable; see design §4.1 / [data-model.md](./data-model.md)): USDT↔UAH spread 1.0% + service 0.2%; USDT↔BTC spread 0.8% + service 0.2%; UAH method fees (Card 0.5%, others 0%); min absolute service fee ≈ 10 UAH equivalent.
 
 ## Constitution Check
 
@@ -34,13 +36,13 @@ Deliver a client↔platform exchange with generic pairs (fiat↔crypto, crypto�
 
 | Gate | Status | Notes |
 |------|--------|-------|
-| I. Funds safety / state machine / ledger+audit | PASS | Designed in data-model + order transitions |
-| II. Privilege separation / providers / no HTTP blocking | PASS | Worker-only secrets; provider ports; queues for detect/payout |
+| I. Funds safety / state machine / ledger+audit | PASS | Assisted lifecycle + PAYOUT_APPROVED in data-model |
+| II. Privilege separation / providers / no HTTP blocking | PASS | Worker-only secrets; provider ports incl. KycProvider; queues for detect/payout |
 | III. TDD for money paths | PASS | Plan requires tests with domain modules |
 | IV. Spec/docs-first / ADR for new patterns | PASS | Spec Kit + docs/ADR path from DEVELOPMENT-DIRECTION |
 | V. Modular monolith / generic pairs / YAGNI | PASS | No microservices; pair config; bot is thin client |
 
-**Post–Phase 1 re-check**: PASS — contracts and data model keep money mutations in API/domain with worker executing privileged providers; no constitution violations requiring Complexity Tracking.
+**Post–Phase 1 re-check**: PASS — contracts and data model keep money mutations in API/domain with worker executing privileged providers after operator approve_payout; no constitution violations requiring Complexity Tracking.
 
 ## Project Structure
 
@@ -71,6 +73,7 @@ p2p-exchanger/
 │   │   ├── worker.main.ts          # Privileged worker
 │   │   ├── auth/
 │   │   ├── customers/
+│   │   ├── kyc/                    # KycProvider orchestration
 │   │   ├── quotes/
 │   │   ├── orders/
 │   │   ├── payments/
@@ -81,18 +84,18 @@ p2p-exchanger/
 │   │   ├── risk/
 │   │   ├── notifications/
 │   │   ├── admin/
-│   │   ├── explain/                # AI copy layer (sanitized prompts)
+│   │   ├── explain/                # AI copy layer (sanitized prompts; flag default on if key)
 │   │   ├── shared/                 # money VO, prisma, queues, logging
 │   │   └── worker/                 # processors only
 │   └── test/
 ├── frontend/
-│   └── src/features/               # exchange, orders, admin, auth, …
-├── bot/                            # Telegram → API
+│   └── src/features/               # exchange, orders, admin, auth, kyc, …
+├── bot/                            # grammY Telegram → API
 ├── docs/                           # system-overview, domain, workflows, adr
 └── scripts/
 ```
 
-**Structure Decision**: Mirror transl8.ai (`backend` with `main` + `worker.main`, `frontend` Vite features). Add `bot/` as thin Telegram client. No Nest logic inside frontend.
+**Structure Decision**: Mirror transl8.ai (`backend` with `main` + `worker.main`, `frontend` Vite features). Add `bot/` as thin **grammY** client. No Nest logic inside frontend.
 
 ## Complexity Tracking
 
@@ -101,6 +104,6 @@ p2p-exchanger/
 ## Phase 0 & 1 Artifacts
 
 - [research.md](./research.md) — stack & pattern decisions  
-- [data-model.md](./data-model.md) — entities & state machine  
+- [data-model.md](./data-model.md) — entities & Assisted state machine  
 - [contracts/](./contracts/) — REST API surface  
 - [quickstart.md](./quickstart.md) — local validation scenarios  
