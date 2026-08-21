@@ -1,0 +1,15 @@
+{
+  "backend/{src,test}/**/*.ts": [
+    "bash -c 'cd backend && npx eslint --fix --max-warnings 0 \"$@\"' --",
+    "bash -c 'cd backend && npx prettier --write \"$@\"' --"
+  ],
+  "frontend/src/**/*.{ts,tsx}": [
+    "bash -c 'cd frontend && npx prettier --write \"$@\"' --"
+  ],
+  "frontend/src/**/*.css": [
+    "bash -c 'cd frontend && npx prettier --write \"$@\"' --"
+  ],
+  "bot/src/**/*.ts": [
+    "bash -c 'cd bot && npx prettier --write \"$@\"' --"
+  ]
+}

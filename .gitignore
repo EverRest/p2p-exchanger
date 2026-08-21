@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+build/
+**/build/
+dist-ssr/
+*.tsbuildinfo
+
+# Test & coverage
+/coverage/
+backend/coverage/
+frontend/coverage/
+bot/coverage/
+.nyc_output/
+playwright-report/
+test-results/
+**/playwright-report/
+**/test-results/
+blob-report/
+playwright/.cache/
+backend/tmp/
+
+# Environment & secrets (never commit real secrets)
+.env
+.env.*
+!.env.example
+!.env.docker
+!.env.worker.example
+!.env.*.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Local tooling / agent notes
+.cursor/
+.claude/
+*.local
+
+# Prisma local sqlite / journals (Postgres is primary)
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# Staging TLS (Let's Encrypt on VPS — never commit)
+certs/
+certbot-www/
+docker-compose.tls-bootstrap.yml
+
+# Keep lockfiles — required for npm ci in Docker and CI
+# (do not ignore package-lock.json)

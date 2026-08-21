@@ -1,0 +1,46 @@
+# Dependencies (reinstalled in container)
+node_modules/
+
+# Build output (rebuilt in container)
+dist/
+coverage/
+*.tsbuildinfo
+
+# Git & CI / agent
+.git/
+.github/
+.husky/
+.cursor/
+.claude/
+
+# Tests (not needed in production image)
+test/
+**/*.spec.ts
+**/*.e2e-spec.ts
+jest.config.js
+jest-e2e.json
+
+# Environment & secrets — never bake into image layers
+.env
+.env.*
+!.env.example
+# .env.docker is compose-mounted at runtime; do not COPY secrets into image
+!.env.docker
+
+# Docs & local tooling
+README.md
+docs/
+*.md
+!prisma/**/*.md
+
+# Editor & OS
+.idea/
+.vscode/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Docker meta (avoid recursive/context noise)
+Dockerfile*
+.dockerignore
+docker-compose*.yml

@@ -1,0 +1,39 @@
+# Root compose build context (rarely used as build context; keep lean if it is)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+coverage/
+.git/
+.github/
+.husky/
+.cursor/
+.claude/
+.specify/
+specs/
+docs/
+*.md
+!README.md
+
+# Secrets
+.env
+.env.*
+!**/.env.example
+!**/.env.docker
+!**/.env.worker.example
+
+# Tests & reports
+**/coverage/
+playwright-report/
+test-results/
+*.log
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# TLS / local overrides
+certs/
+certbot-www/

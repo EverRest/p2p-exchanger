@@ -1,0 +1,136 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange
+      POSTGRES_DB: p2p_exchange
+    ports:
+      # 5435 on host — avoid clash with other local stacks (e.g. transl8 on 5434)
+      - '5435:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U exchange -d p2p_exchange']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    command: ['/app/scripts/docker-entrypoint-api.sh']
+    env_file:
+      - ./backend/.env.docker
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://exchange:exchange@postgres:5432/p2p_exchange?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # API must NOT receive wallet private keys / exchange signing secrets
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://127.0.0.1:3000/api/v1/health | grep -q ok',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker
+    command: npm run start:worker:prod
+    env_file:
+      - ./backend/.env.docker
+      - ./backend/.env
+      - ./backend/.env.worker
+    environment:
+      DATABASE_URL: postgresql://exchange:exchange@postgres:5432/p2p_exchange?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Privileged: Binance + hot-wallet secrets only here (.env.worker)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - ./frontend/.env.docker
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_URL: /api/v1
+      VITE_PROXY_TARGET: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    env_file:
+      - ./bot/.env.docker
+      - ./bot/.env
+    environment:
+      API_BASE_URL: http://api:3000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.2.1
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:11.5.2
+    ports:
+      - '3001:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:

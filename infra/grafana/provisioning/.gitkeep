@@ -1,0 +1,3 @@
+# Grafana provisioning (optional monitoring profile)
+
+Add datasources/dashboards here when enabling `docker compose --profile monitoring`.

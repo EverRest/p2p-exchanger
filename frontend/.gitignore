@@ -1,0 +1,2 @@
+# App-level ignores are covered by root .gitignore; keep Vite defaults minimal.
+*.local

@@ -1,0 +1,12 @@
+{
+  "name": "p2p-exchanger",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Client↔platform exchange — Spec Kit + transl8-style monorepo",
+  "scripts": {
+    "prepare": "git config core.hooksPath .husky 2>/dev/null || true"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
