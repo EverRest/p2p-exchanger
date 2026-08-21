@@ -1,278 +1,54 @@
-Так, і я б тут **суттєво змінив попередню архітектурну пропозицію щодо AI**.
+> Aligned to design v0.3. Supersedes earlier brainstorm notes.
 
-## 1. AI я б зробив повністю «тупою» щодо системи
+# Roadmap
 
-Твоя ідея мені подобається більше для фінансового продукту.
+## Phase H — Handbook (before feature code)
 
-AI **не повинна мати доступу ні до БД, ні до API, ні до балансу, ні до ордерів, ні до персональних даних**.
+Complete documentation so specs and implementation stay aligned.
 
-Тобто:
+| Step | Deliverable |
+|------|-------------|
+| H0 | Design v0.3 committed |
+| H1 | SECURITY, system-overview, architecture |
+| H2 | domain/*, workflows/* |
+| H3 | **docs/product/** rewrite (this set) |
+| H4 | ADRs 0002–0005 (+ sync 0001) |
+| H5 | Sync SCOPE.md + specs/001/* |
+| H6 | docs/README, root README, AGENTS.md |
+| H7 | Handbook DoD green → writing-plans / tasks.md |
 
-```text
-Exchange App
-│
-┌──────────┴──────────┐
-│                     │
-Business Logic          AI
-│                     │
-Orders / Payments       ONLY TEXT
-Users / Balances        GENERATION
-Transactions
-```
+Prep order: **Handbook → sync specs/001 → code**.
 
-AI отримує тільки те, що ти **явно передаєш їй у prompt**.
+## Phase 1 — Foundation
 
-Наприклад, навіть краще не передавати:
+Money types, order state machine (incl. **PAYOUT_APPROVED**), ledger, mocks, auth (email/phone + step-up OTP), KYC port + admin shell, RBAC, kill-switch, idempotency + audit.
 
-> User: Ivan Petrov, card ****1234, order #18273...
+Runtime: **Node 22**. API: NestJS + CQRS + Prisma + PostgreSQL. Worker: BullMQ + Redis.
 
-а передавати абстрактний контекст:
+## Phase 2 — US1: USDT ↔ UAH (Assisted)
 
-```text
-Context:
-- language: uk
-- screen: payment_pending
-- amount: 500 USDT
-- status: awaiting_payment
-- payment_method: bank_transfer
-```
+Web vertical slice: quote (120s TTL) → order → payment (4 UAH methods) → operator confirm/approve → complete. AI explain behind feature flag.
 
-AI генерує:
+## Phase 3 — US2: USDT ↔ BTC
 
-> «Після оплати натисніть “Я оплатив”. Ми перевіримо платіж і повідомимо вас, коли він буде підтверджений.»
+Second corridor on same engine; BTC network fee from provider estimate on quote.
 
-Але AI **сама нічого не знає і нічого не може зробити**.
+## Phase 4 — Telegram parity
 
-Це дуже хороша модель для security.
+grammY bot as thin client to same API; UK + EN from `language_code`.
 
----
+## Phase 5 — Exceptions polish
 
-# 2. Я б взагалі не називав це AI Agent
+Exception queue UX, mismatch/risk flows, operator SLA tooling (targets TBD).
 
-Тут краще концепція:
+## Phase 6 — Fiat↔fiat config
 
-**AI Assistant / AI Copy Layer**
+Pair-type C as configuration — no new product surface required for handbook.
 
-Вона відповідає за:
+## Phase 7 — Real adapters
 
-* пояснення;
-* мікрокопі;
-* onboarding;
-* help;
-* пояснення комісій;
-* пояснення статусів;
-* локалізацію;
-* дружній tone of voice;
-* контекстні підказки.
+Binance, hot wallet, and KYC vendor implementations behind existing ports.
 
-А не:
+## Explicitly later
 
-* читати акаунт;
-* шукати транзакції;
-* робити payouts;
-* бачити історію;
-* приймати рішення.
-
-Це навіть продуктово цікавіше.
-
----
-
-# 3. Наприклад, UI може бути дуже «Gloss-like»
-
-Якщо ти маєш на увазі **Gloss як reference по mobile-first, clean, premium consumer app UX**, то я б ішов приблизно в цей напрямок.
-
-Не робити класичний:
-
-```text
-Exchange
-----------------
-Sell:
-[ USDT ▼ ]
-
-Amount:
-[ 500 ]
-
-Buy:
-[ UAH ▼ ]
-
-Rate:
-...
-
-[ Exchange ]
-```
-
-Це виглядає як fintech 2018 року.
-
-Я б зробив **один дуже чистий conversational exchange flow**.
-
-Наприклад:
-
-```text
-┌───────────────────────────┐
-│                           │
-│       Exchange             │
-│                           │
-│  How much do you want     │
-│  to exchange?             │
-│                           │
-│      500 USDT              │
-│                           │
-│          ↓                 │
-│                           │
-│      ≈ 20 345 UAH          │
-│                           │
-│  1 USDT = 40.69 UAH        │
-│                           │
-│      [ Continue ]          │
-│                           │
-└───────────────────────────┘
-```
-
-Дуже мало UI.
-
----
-
-# 4. Головний принцип UX
-
-Я б будував продукт навколо:
-
-> **One task per screen.**
-
-Користувач не повинен бачити:
-
-* balances;
-* 20 меню;
-* таблиці;
-* десятки налаштувань;
-* technical blockchain information.
-
-Він хоче:
-
-> «Я хочу віддати USDT і отримати гривні».
-
-Тому flow:
-
-```text
-Exchange
-↓
-Amount
-↓
-Rate
-↓
-Payment
-↓
-Confirm
-↓
-Waiting
-↓
-Done
-```
-
----
-
-# 5. А AI може бути частиною UI, а не окремим чатиком
-
-Оце, на мою думку, дуже важливо.
-
-Я **не робив би величезну кнопку "AI Chat"**.
-
-Замість цього AI інтегрується в продукт.
-
-Наприклад:
-
-### Quote screen
-
-```text
-500 USDT
-
-You'll receive
-20 345 UAH
-
-Rate
-40.69
-
-Fee
-100 UAH
-
-[ Continue ]
-
-"Why is the fee this high?"
-```
-
-Користувач натискає.
-
-AI генерує коротке пояснення:
-
-> «У цю суму входить наш сервісний збір та витрати на обробку платежу. Курс уже враховує спред.»
-
----
-
-# 6. AI на екрані payment
-
-Наприклад:
-
-```text
-Send 500 USDT
-
-Network
-TRC20
-
-Address
-Txxxxxxxx
-
-[ Copy address ]
-
-Before sending:
-Make sure the network is TRC20.
-
-[ I paid ]
-```
-
-І нижче:
-
-> 💡 Не знаєте, як відправити USDT через TRC20?
-
-AI може пояснити.
-
-Але вона не знає:
-
-* адресу користувача;
-* його баланс;
-* його Binance account;
-* transaction history.
-
-Вона просто отримує:
-
-```text
-topic = "how_to_send_usdt_trc20"
-```
-
-і генерує відповідь.
-
----
-
-# 7. AI як «інтелектуальний UX layer»
-
-Я б заклав такі місця:
-
-### Onboarding
-
-> «Вперше користуєтесь P2P обміном?»
-
-AI пояснює процес у 2–3 реченнях.
-
-### Quote
-
-> «Чому я отримую саме цю суму?»
-
-AI пояснює calculation.
-
-### Payment
-
-> «Що мені зараз робити?»
-
-AI пояснює наступний крок.
-
-### Waiting
-
-> «Чому так довго?»
+Microservices, K8s, mobile apps, peer marketplace, AI tools/agents, multi-venue arbitrage, production key ceremony.
