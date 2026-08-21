@@ -1,7 +1,7 @@
 # P2P Exchanger — Design (v0.3)
 
 Date: 2026-08-21  
-Status: brainstorm sections approved; awaiting user review of this written spec  
+Status: approved (2026-08-21)  
 Supersedes: v0.2  
 Sources: brainstorm (prep-for-implementation), exchanger SoT only (`p2p-docs` ignored)
 
