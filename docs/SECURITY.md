@@ -83,7 +83,7 @@ Admin and operator actions use role-based access. Default roles:
 |------|-------------|
 | **viewer** | Read-only: orders, audit, dashboards, settings visibility where non-sensitive |
 | **operator** | `confirm_payment`, `approve_payout`, exception queue handling, operational notes |
-| **admin** | Kill-switch, platform settings, fee/config edits, operator user management |
+| **admin** | Kill-switch, platform settings, fee/config edits, operator user management, **KYC approve/reject** |
 
 Sensitive mutations require authenticated operator identity and emit **audit** events. Step-up OTP applies to auth profile changes per product auth rules.
 

@@ -20,7 +20,7 @@ The exchanger handles regulated assets and fiat rails. Allowing orders before id
 ## Consequences
 
 - Quote and order endpoints must return a clear blocked response when KYC is not VERIFIED.
-- Admin RBAC includes KYC review; approve/reject transitions emit audit events.
+- **Admin** RBAC only for KYC approve/reject in MVP (operators handle confirm_payment / approve_payout, not KYC decide); transitions emit audit events.
 - Web and Telegram onboarding flows must surface KYC before exchange (see [kyc-onboarding.md](../workflows/kyc-onboarding.md)).
 - Future real-vendor adapter replaces mock implementation without changing the order gate contract.
 - PII handling follows [SECURITY.md](../SECURITY.md) §KYC/PII.

@@ -55,7 +55,7 @@ During or after an exchange, the customer views clear status (what happened, wha
 **Acceptance Scenarios**:
 
 1. **Given** an order in awaiting payment, **When** the customer views it, **Then** they see payment instructions, deadline (30 min window), and next step in plain language.
-2. **Given** payment is confirmed by an operator (or authorized system action), **When** help text explains status, **Then** it may state payment received; **Given** payment is not confirmed, **Then** help MUST NOT claim it was received.
+2. **Given** payment is confirmed by an authorized **operator**, **When** help text explains status, **Then** it may state payment received; **Given** payment is not confirmed, **Then** help MUST NOT claim it was received.
 3. **Given** the customer uses Telegram or web, **When** they list their orders, **Then** the same statuses and amounts appear on both channels.
 
 ---
@@ -123,11 +123,11 @@ A customer with VERIFIED KYC exchanges between two fiat currencies (e.g. UAH↔E
 - **FR-012**: System MUST provide a kill-switch (or equivalent) to pause new orders and configurable risk/limit hooks that can block or require human review.
 - **FR-013**: System MUST expose the full customer exchange journey on Web and on Telegram with the same business rules and consistent order data.
 - **FR-014**: System MUST provide an admin console for operators to inspect orders, confirm payment, approve payout, act on exceptions, and apply RBAC-protected overrides.
-- **FR-015**: System MUST enforce RBAC roles: **viewer** (read-only), **operator** (confirm_payment, approve_payout, exception queue), **admin** (kill-switch, platform settings, fee/config, operator user management).
+- **FR-015**: System MUST enforce RBAC roles: **viewer** (read-only), **operator** (confirm_payment, approve_payout, exception queue), **admin** (kill-switch, platform settings, fee/config, operator user management, KYC approve/reject).
 - **FR-016**: System MUST obtain liquidity primarily from a designated primary exchange venue, with configurable fallback to a platform-controlled hot wallet, without exposing custody keys to customer clients.
 - **FR-017**: Customers MUST authenticate before creating orders; Telegram identity MAY be linked to the same customer record as web.
 - **FR-018**: System MUST require **KYC status VERIFIED** before any order creation; KYC vendor is TBD for production; MVP uses mock provider plus manual admin approval path.
-- **FR-019**: System MUST expose KYC submission and status to customers and manual approve/reject to authorized admin/operator per RBAC.
+- **FR-019**: System MUST expose KYC submission and status to customers and manual approve/reject to authorized **admin** only (MVP).
 - **FR-020**: Optional explain/help assistance MUST be available behind a feature flag (prod default on when API key present), use only sanitized, non-privileged context, and MUST NOT move funds or assert unconfirmed payment.
 - **FR-021**: System MUST notify customers of material status changes (at least: awaiting payment, payout approved, completed, failed/exception) on their active channel(s).
 - **FR-022**: System MUST reject expired quotes, invalid addresses/networks, disabled pairs, non-VERIFIED KYC, and kill-switched creations with actionable errors.
@@ -155,7 +155,7 @@ A customer with VERIFIED KYC exchanges between two fiat currencies (e.g. UAH↔E
 ### Measurable Outcomes
 
 - **SC-001**: A new customer with VERIFIED KYC can complete a first USDT↔UAH exchange (quote → pay → operator confirm/approve → receive) in under 15 minutes when rails are healthy, excluding external bank/chain delays beyond the platform’s control.
-- **SC-002**: **100%** of happy-path payment confirmations and payout approvals are attributed to an authorized operator (or equivalent authorized system actor) in the audit trail with actor identity and timestamp.
+- **SC-002**: **100%** of happy-path payment confirmations and payout approvals are attributed to an authorized **operator** in the audit trail with actor identity and timestamp.
 - **SC-003**: 100% of completed or failed money-affecting orders have matching ledger and audit records sufficient to reconstruct what happened.
 - **SC-004**: Duplicate payment-detection, operator action, or payout retries never result in double payout in test scenarios designed for idempotency.
 - **SC-005**: Customers see consistent order status between Web and Telegram within 30 seconds of a status change under normal operation.

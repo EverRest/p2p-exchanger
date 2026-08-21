@@ -42,7 +42,7 @@ Status **PENDING**. Customer sees in-progress state on both channels. **Order cr
 Review path (MVP):
 
 - **Mock provider** — may auto-advance in test environments only
-- **Manual admin approve/reject** — operator/admin in admin UI (primary MVP path)
+- **Manual admin approve/reject** — admin in admin UI (primary MVP path)
 - **Future provider** — webhook or poll updates KycCase without changing domain rules
 
 ### 4. Outcome
@@ -55,13 +55,15 @@ Review path (MVP):
 
 KYC is re-checked at **order create**, not only at quote time. A customer verified at quote but blocked before confirm is still rejected ([kyc.md](../domain/kyc.md)).
 
-## Admin / operator review (MVP)
+## Admin review (MVP)
 
 | Action | Role | Effect |
 |--------|------|--------|
-| Approve KYC | **admin** (or delegated operator policy TBD) | **PENDING** → **VERIFIED** |
+| Approve KYC | **admin** | **PENDING** → **VERIFIED** |
 | Reject KYC | **admin** | **PENDING** → **REJECTED** |
 | Block customer | **admin** | → **BLOCKED** |
+
+*Future: KYC decide may be delegated to operator per policy.*
 
 Each transition emits [audit events](../domain/audit.md): actor, timestamp, reason.
 

@@ -73,7 +73,7 @@ Run:
 ```text
 /speckit-constitution
 
-Create principles for a semi-automatic client↔platform exchanger (not a peer marketplace), focused on:
+Create principles for an **Assisted** client↔platform exchanger (not a peer marketplace), focused on:
 - safety of funds; Assisted settlement (detect may be automatic; confirm payment and approve payout require operators); kill-switches and risk limits that can force human review
 - explicit order state machine including PAYOUT_APPROVED; no ad-hoc status writes
 - durable ledger + full audit trail for every financial transition
@@ -95,7 +95,7 @@ Focus on **what** and **why**. Use `docs/SCOPE.md` + `docs/product/`. Example st
 ```text
 /speckit-specify
 
-Build a semi-automatic exchange platform (client ↔ platform, not peer marketplace) that supports ALL pair types:
+Build an **Assisted** exchange platform (client ↔ platform, not peer marketplace) that supports ALL pair types:
 A) fiat↔crypto (e.g. UAH↔USDT)
 B) crypto↔crypto (e.g. USDT↔BTC)
 C) fiat↔fiat (e.g. UAH↔EUR)

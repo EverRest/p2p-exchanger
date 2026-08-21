@@ -167,13 +167,13 @@ H7  Handbook DoD green → writing-plans / feature tasks.md
 
 **Handbook completed:** 2026-08-21
 
-- [ ] No contradictions: product ↔ SCOPE ↔ specs/001 ↔ this design  
-- [ ] SECURITY covers AI, secrets, Assisted, RBAC, KYC  
-- [ ] State machine + workflows documented  
-- [ ] Fee defaults + i18n + Node 22 + grammY documented  
-- [ ] `docs/product/*` English rewrite complete  
-- [ ] Indexes point to handbook; `p2p-docs` not SoT  
-- [ ] tasks.md ready for Assisted implementation  
+- [x] No contradictions: product ↔ SCOPE ↔ specs/001 ↔ this design (KYC enums, SC-002, admin-only KYC RBAC aligned 2026-08-21)  
+- [x] SECURITY covers AI, secrets, Assisted, RBAC, KYC  
+- [x] State machine + workflows documented  
+- [x] Fee defaults + i18n + Node 22 + grammY documented  
+- [x] `docs/product/*` English rewrite complete  
+- [x] Indexes point to handbook; `p2p-docs` not SoT  
+- [x] tasks.md ready for Assisted implementation  
 
 **Out of prep:** feature code, KYC vendor pick, real keys, min/max numbers, `p2p-docs` changes.
 

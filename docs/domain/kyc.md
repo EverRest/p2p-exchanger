@@ -35,7 +35,7 @@ Defined in domain; implemented in infrastructure.
 |---------|-------------|
 | Submit identity | Command → `KycProvider.submit()` |
 | Poll/webhook status | Worker or provider callback → update KycCase |
-| Admin manual review | Operator command overrides mock/TBD vendor |
+| Admin manual review | **Admin** command overrides mock/TBD vendor (MVP; future: may delegate to operator) |
 
 **MVP:** mock provider + **manual admin approve/reject** in admin UI. Real vendor adapter is future work.
 

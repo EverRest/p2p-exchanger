@@ -13,13 +13,13 @@
 | id | UUID |
 | email / phone | At least one identifier for web auth |
 | telegram_user_id | Optional, unique when set |
-| kyc_status | pending / verified / rejected / expired (denormalized from latest KycCase) |
+| kyc_status | UNVERIFIED / PENDING / VERIFIED / REJECTED / BLOCKED (denormalized from latest KycCase; see [kyc.md](../../docs/domain/kyc.md)) |
 | locale | uk / en (optional preference) |
 | status | active / blocked |
 | risk_level | default / elevated / blocked |
 | created_at, updated_at | |
 
-**Rules**: Web and Telegram link to one Customer when identities are associated. Order create requires `kyc_status = verified`.
+**Rules**: Web and Telegram link to one Customer when identities are associated. Order create requires `kyc_status = VERIFIED`.
 
 ### KycCase
 
@@ -27,12 +27,12 @@
 |-------|--------|
 | id | UUID |
 | customer_id | FK |
-| status | pending / in_review / verified / rejected / expired |
+| status | UNVERIFIED / PENDING / VERIFIED / REJECTED / BLOCKED |
 | provider | mock / vendor_key (TBD) |
 | external_ref | Vendor case id when applicable |
 | submitted_at | |
 | decided_at | |
-| decided_by_operator_id | Nullable until manual admin/operator decision |
+| decided_by_admin_id | Nullable until manual **admin** approve/reject |
 | decision_reason | Sanitized notes |
 | payload_ref | Encrypted/tokenized PII storage pointer (not raw PII in audit) |
 | created_at, updated_at | |

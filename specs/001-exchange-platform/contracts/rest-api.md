@@ -62,11 +62,11 @@ Response includes `expiresAt` (~120s from create) and fee breakdown per corridor
 }
 ```
 
-Returns case id and status `pending` / `in_review`.
+Returns case id and status `PENDING` (handbook set: `UNVERIFIED | PENDING | VERIFIED | REJECTED | BLOCKED`).
 
 ### GET `/kyc/status`
 
-Returns `{ "status": "pending|in_review|verified|rejected|expired", "caseId": "…", "updatedAt": "…" }`.
+Returns `{ "status": "UNVERIFIED|PENDING|VERIFIED|REJECTED|BLOCKED", "caseId": "…", "updatedAt": "…" }`.
 
 ### POST `/explain` (body sketch)
 
@@ -88,7 +88,7 @@ Feature-flagged; must not access DB/PII beyond allowlisted sanitized fields; mus
 | GET | `/api/v1/admin/orders` | Filter by status/exception |
 | GET | `/api/v1/admin/orders/:id` | Detail + timeline + payments/payouts |
 | POST | `/api/v1/admin/orders/:id/actions` | Operator actions (RBAC): `confirm_payment`, `approve_payout`, `retry_payout`, `resolve_exception`, `cancel`, `refund` |
-| POST | `/api/v1/admin/kyc/:id/decide` | Manual approve/reject KYC case (admin; operator per RBAC policy) |
+| POST | `/api/v1/admin/kyc/:id/decide` | Manual approve/reject KYC case (**admin** only, MVP) |
 | GET | `/api/v1/admin/exceptions` | Open exception queue |
 | GET | `/api/v1/admin/settings` | Kill-switch, limits, quote TTL, payment window, fees |
 | PATCH | `/api/v1/admin/settings` | Update kill-switch / limits / fee config (admin) |
@@ -114,13 +114,13 @@ Feature-flagged; must not access DB/PII beyond allowlisted sanitized fields; mus
 **RBAC**:
 - **viewer**: GET endpoints only  
 - **operator**: `confirm_payment`, `approve_payout`, exception queue actions  
-- **admin**: settings, kill-switch, fee/config, operator user management, KYC decide (if not delegated to operator)
+- **admin**: settings, kill-switch, fee/config, operator user management, **KYC decide** (approve/reject; MVP admin-only)
 
 ### POST `/admin/kyc/:id/decide` (body sketch)
 
 ```json
 {
-  "decision": "verified",
+  "decision": "VERIFIED",
   "reason": "Documents OK",
   "idempotencyKey": "kyc-decide-…"
 }
