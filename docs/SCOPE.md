@@ -1,15 +1,20 @@
 # Product scope (decisions)
 
-Source notes: `docs/product/` (copied from `~/code/p2p-docs`).
+**Authoritative design:** [design v0.3](./superpowers/specs/2026-08-21-p2p-exchanger-design.md)  
+**Security:** [SECURITY.md](./SECURITY.md)
+
+Source notes: `docs/product/` (English rewrite from design v0.3).
 
 ## Product model
 
 **Client ↔ platform exchanger** (not a peer marketplace).
 
-Flow: quote → order → client pays → payment detected/confirmed → processing → payout → complete  
+Flow: quote → order → client pays → payment detected → **operator confirms payment** → processing → **operator approves payout** → complete  
 (with terminal states: expired / cancelled / refunded / failed).
 
-Happy path is **mostly automatic**; operators handle **exceptions and disputes**.
+Settlement is **Assisted**: automation may detect payments, but **confirm payment** and **approve payout** require an authorized operator. Customer “I paid” is not final confirm. Operators also handle exceptions and disputes.
+
+Order-visible status includes **`PAYOUT_APPROVED`** before completion.
 
 ## Pair types — all three (product goal)
 
@@ -34,7 +39,41 @@ Domain: generic pairs (`input_asset` / `output_asset`) + pluggable payment, payo
 |--------------|----------------|
 | USDT | **TRC20** and **ERC20** |
 | BTC | Mainnet (address format validated in ops) |
-| UAH | **2–3 methods**: card and/or IBAN (banks via config) |
+| UAH | **4 methods:** Card, IBAN, Monobank, PrivatBank |
+
+## Timing (decided)
+
+| Parameter | Default |
+|-----------|---------|
+| Quote TTL | **120s** |
+| Payment window | **30 min** |
+
+Min/max order amounts: config placeholders only (no fixed numbers in docs).
+
+## Fees (decided — config; admin-editable)
+
+| Corridor | Spread | Service fee | Notes |
+|----------|--------|-------------|--------|
+| USDT ↔ UAH | **1.0%** | **0.2%** | USDT network fees via `network_fee_usdt_trc20` / `_erc20` placeholders |
+| USDT ↔ BTC | **0.8%** | **0.2%** | BTC network fee from provider estimate; snapshot on quote |
+
+| UAH payment fee | Rate |
+|-----------------|------|
+| Card | **0.5%** |
+| IBAN | **0%** |
+| Monobank | **0%** |
+| PrivatBank | **0%** |
+
+**Minimum absolute service fee:** equivalent of **10 UAH** on small orders (config).
+
+## KYC (decided)
+
+**VERIFIED** KYC required before any order. Vendor **TBD**; MVP uses mock provider + manual admin approval. See [SECURITY.md](./SECURITY.md) for PII and AI isolation rules.
+
+## Auth & i18n (decided)
+
+- Auth: email **or** phone; step-up OTP on sensitive profile changes  
+- Client UI **UK + EN**; locale from Accept-Language / Telegram `language_code`; fallback **uk**
 
 ## Liquidity (decided)
 
@@ -45,10 +84,15 @@ Domain: generic pairs (`input_asset` / `output_asset`) + pluggable payment, payo
 
 No vendor SDK inside domain.
 
-## Automation (decided)
+## Operator controls (decided)
 
-Mostly automatic settlement; operators on exceptions/disputes.  
-Mandatory: state machine, idempotency, ledger, audit, kill-switches, risk limits → human review.
+Assisted settlement with mandatory state machine, idempotency, ledger, audit, kill-switches, risk limits, and RBAC.
+
+| Role | Scope |
+|------|-------|
+| **viewer** | Read-only orders, audit, dashboards |
+| **operator** | `confirm_payment`, `approve_payout`, exception queue |
+| **admin** | Kill-switch, platform settings, fee/config, operator user management |
 
 ## Client channels (decided)
 
@@ -57,7 +101,7 @@ Web also hosts **admin**.
 
 ## AI (decided)
 
-**Copy / explain layer only** — no order tools, no DB/PII access, sanitized prompt context.
+**Explain / copy in MVP** — feature flag; prod default **on** if API key present. No tools, no DB/PII access, allowlisted sanitized prompt context only. See [SECURITY.md](./SECURITY.md).
 
 ## Stack (decided) — option B + privileged worker
 
@@ -65,11 +109,12 @@ Aligned with **transl8.ai** engineering practices — see [`DEVELOPMENT-DIRECTIO
 
 | Layer | Tech | Privilege |
 |-------|------|-----------|
-| Web | **React + Vite** + TypeScript + Tailwind + TanStack Query + feature folders (mirrors transl8.ai) | Public / session only |
-| API | NestJS + CQRS + TypeScript + Prisma + PostgreSQL | Business logic, RBAC, ledger writes; **no** wallet private keys |
+| Web | **React + Vite** + TypeScript + Tailwind + TanStack Query + i18n (uk/en) | Public / session only |
+| API | NestJS + CQRS + TypeScript + Prisma + PostgreSQL | Business logic, RBAC, ledger writes, KYC orchestration; **no** wallet private keys |
 | Queue | Redis + BullMQ | Job transport |
 | Worker | Separate Nest application context (`worker.main`) | **Only place** for hot-wallet keys, Binance signing secrets, payout execution |
-| Bot | grammY/Telegraf thin client → API | Bot token only |
+| Bot | **grammY** thin client → API | Bot token only |
+| Runtime | **Node 22** | — |
 | DX | pnpm or npm workspaces, Makefile, Docker Compose, GitHub Actions, ADRs, TDD | — |
 | Observability | Pino structured logs + tracing (as in transl8) + Sentry | — |
 
@@ -77,17 +122,17 @@ Modular monolith API (not microservices). Domain modules mirror transl8 layout; 
 
 ## Delivery strategy
 
-1. Foundation: monorepo, state machine, ledger, provider interfaces, admin, web + bot stubs  
-2. Launch: `USDT ↔ UAH` + `USDT ↔ BTC`, USDT TRC20+ERC20, UAH 2–3 methods, Binance + hot wallet, auto happy path  
-3. Then: fiat↔fiat corridor; optional order-aware AI later  
+1. Foundation: monorepo, state machine, ledger, provider interfaces, auth, KYC port, admin RBAC shell, web + bot stubs  
+2. Launch: `USDT ↔ UAH` Assisted on web (+ explain with flag), then `USDT ↔ BTC`; USDT TRC20+ERC20; UAH 4 methods; Binance + hot wallet  
+3. Then: Telegram parity; fiat↔fiat corridor; real Binance / hot wallet / KYC vendor adapters  
 
 Specs cover all three pair types; tasks may phase C.
 
 ## Explicit non-goals for first release
 
-Microservices/K8s, many liquidity venues, mobile apps, AI that moves funds or reads privileged order data, peer-offer marketplace, event-sourcing the whole system.
+Microservices/K8s, many liquidity venues, mobile apps, AI with tools or data access, peer-offer marketplace, event-sourcing the whole system, touching **`p2p-docs`**, legal opinions, production key ceremony, complete OpenAPI YAML.
 
 ## Repo phase
 
-**Preparation only (now):** Spec Kit artifacts, DevOps (Make/Docker/CI/hooks), and engineering principles (`AGENTS.md`, coding-standards, patterns).  
-**Feature implementation:** deferred — start later from `specs/001-exchange-platform/tasks.md` when explicitly kicked off.
+**Handbook first (now):** design v0.3, [SECURITY.md](./SECURITY.md), domain/workflows, product rewrite, ADRs, sync specs/001.  
+**Feature implementation:** deferred — start from `specs/001-exchange-platform/tasks.md` when handbook DoD is green.
