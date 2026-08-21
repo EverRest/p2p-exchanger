@@ -74,15 +74,15 @@ Run:
 /speckit-constitution
 
 Create principles for a semi-automatic client↔platform exchanger (not a peer marketplace), focused on:
-- safety of funds; mostly automatic settlement with operators on exceptions/disputes; kill-switches and risk limits that can force human review
-- explicit order state machine; no ad-hoc status writes
+- safety of funds; Assisted settlement (detect may be automatic; confirm payment and approve payout require operators); kill-switches and risk limits that can force human review
+- explicit order state machine including PAYOUT_APPROVED; no ad-hoc status writes
 - durable ledger + full audit trail for every financial transition
-- provider boundaries (rates, payments, payouts, exchange liquidity) — no vendor SDK in domain; privileged secrets only in BullMQ worker (transl8.ai pattern)
+- provider boundaries (rates, payments, payouts, exchange liquidity, KYC) — no vendor SDK in domain; privileged secrets only in BullMQ worker (transl8.ai pattern)
 - CQRS + DDD module boundaries; cross-module via domain events
 - money as typed amounts (never JS number); idempotent payment/payout operations
-- KYC/AML and limits as configurable policy hooks
+- KYC VERIFIED before any order; limits as configurable policy
 - strong tests on money paths (TDD default); no silent failures on payment or release
-- one-task-per-screen UX; AI only as explain/copy layer with no privileged system access (no order tools in v1)
+- one-task-per-screen UX; AI only as explain/copy layer with no privileged system access (no order tools)
 - docs-first: domain/workflows/ADR before new patterns (transl8.ai discipline)
 ```
 
@@ -129,13 +129,13 @@ Only after the spec is solid. Example (replace with your choices):
 ```text
 /speckit-plan
 
-Tech preferences for MVP:
-- Monorepo or separate API + web
-- Backend: (e.g. NestJS / Go / Laravel) with PostgreSQL
-- Web: (e.g. Next.js) with clear trade status UI
-- Auth: email/OAuth + optional 2FA
-- Payments: start with manual payment methods + proof upload; design for later PSP hooks
-- Escrow: define clearly (platform wallet vs smart contract vs off-chain ledger)
+Tech preferences for MVP (locked for this repo — see design v0.3):
+- Monorepo: backend (NestJS API + privileged worker) + frontend (React+Vite) + bot (grammY)
+- Backend: NestJS + CQRS + Prisma + PostgreSQL; Node 22
+- Web: React + Vite + TanStack Query + uk/en i18n; clear trade status UI
+- Auth: email or phone + step-up OTP; Telegram link to same Customer
+- Payments: Assisted path — detect may auto; operator confirm + approve payout; UAH Card/IBAN/Monobank/PrivatBank
+- Liquidity: Binance primary + hot wallet fallback via ports (secrets in worker only)
 - Observability: structured logs + audit trail for every trade state transition
 ```
 
