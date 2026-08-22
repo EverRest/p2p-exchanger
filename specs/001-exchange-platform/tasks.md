@@ -26,7 +26,7 @@
 - [x] T004 [P] Initialize `bot/package.json` with **grammY** TypeScript client (**Node 22**)
 - [x] T005 [P] Add root `Makefile`, `docker-compose.yml` (Postgres + Redis), `VERSION`, and `.gitignore`
 - [x] T006 [P] Add `backend/.env.example`, `frontend/.env.example`, `bot/.env.example` (worker secrets documented as worker-only)
-- [ ] T007 [P] Configure ESLint/Prettier for `backend/`, `frontend/`, `bot/` (backend + frontend present; **bot** still needs eslint config file)
+- [x] T007 [P] Configure ESLint/Prettier for `backend/`, `frontend/`, `bot/`
 - [x] T008 Create `AGENTS.md` stub pointing at constitution + `docs/DEVELOPMENT-DIRECTION.md`
 
 ---
