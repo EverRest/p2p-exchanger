@@ -9,7 +9,7 @@ FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DATABASE_URL=postgresql://exchange:exchange@postgres:5432/p2p_exchange?schema=public
-RUN npx prisma generate || true
+RUN npx prisma generate
 RUN npm run build
 
 FROM base AS production
@@ -17,6 +17,8 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build /app/generated ./generated
 COPY --from=build /app/scripts ./scripts
 COPY package*.json ./
 RUN chmod +x scripts/docker-entrypoint-api.sh scripts/post-deploy.sh 2>/dev/null || true
@@ -30,6 +32,8 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build /app/generated ./generated
 COPY --from=build /app/scripts ./scripts
 COPY package*.json ./
 CMD ["node", "dist/worker.main.js"]

@@ -47,8 +47,8 @@
 
 - [ ] T012 Implement `Money` value object in `backend/src/shared/domain/money/money.ts` (make T009 pass)
 - [ ] T013 Implement **Assisted** order state machine in `backend/src/orders/domain/order-state-machine.ts` (make T010 pass)
-- [ ] T014 Create Prisma schema skeleton (Customer, **KycCase**, Asset refs, ExchangePair, PaymentMethod, Quote, Order, Payment, Payout, LedgerEntry, AuditEvent, ExceptionCase, OperatorUser, PlatformSettings) in `backend/prisma/schema.prisma`
-- [ ] T015 Run initial migration + `prisma generate`; document in `backend/prisma/migrations/`
+- [x] T014 Create Prisma schema skeleton (Customer, **KycCase**, Asset refs, ExchangePair, PaymentMethod, Quote, Order, Payment, Payout, LedgerEntry, AuditEvent, ExceptionCase, OperatorUser, PlatformSettings) in `backend/prisma/schema.prisma`
+- [x] T015 Run initial migration + `prisma generate`; document in `backend/prisma/migrations/`
 - [ ] T016 Implement Prisma module + transactional helper in `backend/src/shared/prisma/`
 - [ ] T017 [P] Implement Pino logging + tracing bootstrap in `backend/src/shared/observability/` for API and worker
 - [ ] T018 [P] Configure Nest global prefix `/api`, URI version `v1`, validation pipe, exception filter in `backend/src/main.ts`

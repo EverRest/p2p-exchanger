@@ -1,0 +1,408 @@
+// Core exchange platform schema — design v0.3 / specs/001-exchange-platform/data-model.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum AssetKind {
+  FIAT
+  CRYPTO
+}
+
+enum CustomerStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum CustomerRiskLevel {
+  DEFAULT
+  ELEVATED
+  BLOCKED
+}
+
+enum CustomerLocale {
+  UK
+  EN
+}
+
+enum KycStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  BLOCKED
+}
+
+enum PaymentDirection {
+  PAYIN
+  PAYOUT
+  BOTH
+}
+
+enum OrderStatus {
+  CREATED
+  AWAITING_PAYMENT
+  PAYMENT_DETECTED
+  PAYMENT_CONFIRMED
+  PROCESSING
+  PAYOUT_PENDING
+  PAYOUT_APPROVED
+  COMPLETED
+  EXPIRED
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  DETECTED
+  CONFIRMED
+  MISMATCHED
+  EXPIRED
+}
+
+enum PayoutStatus {
+  PENDING
+  SUBMITTED
+  COMPLETED
+  FAILED
+}
+
+enum ExceptionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ActorType {
+  SYSTEM
+  CUSTOMER
+  OPERATOR
+}
+
+enum OperatorRole {
+  VIEWER
+  OPERATOR
+  ADMIN
+}
+
+enum OperatorStatus {
+  ACTIVE
+  DISABLED
+}
+
+// --- Reference / config ---
+
+model Asset {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String    @unique
+  kind      AssetKind
+  decimals  Int
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  networks         AssetNetwork[]
+  inputPairs       ExchangePair[] @relation("PairInputAsset")
+  outputPairs      ExchangePair[] @relation("PairOutputAsset")
+  paymentMethods   PaymentMethod[]
+
+  @@map("assets")
+}
+
+model AssetNetwork {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @map("asset_id") @db.Uuid
+  code      String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, code])
+  @@map("asset_networks")
+}
+
+model ExchangePair {
+  id                    String   @id @default(uuid()) @db.Uuid
+  inputAssetId          String   @map("input_asset_id") @db.Uuid
+  outputAssetId         String   @map("output_asset_id") @db.Uuid
+  enabled               Boolean  @default(false)
+  minAmount             Decimal? @map("min_amount") @db.Decimal(36, 18)
+  maxAmount             Decimal? @map("max_amount") @db.Decimal(36, 18)
+  spreadPct             Decimal  @default(0) @map("spread_pct") @db.Decimal(8, 4)
+  serviceFeePct         Decimal  @default(0) @map("service_fee_pct") @db.Decimal(8, 4)
+  minServiceFeeUahEquiv Decimal? @map("min_service_fee_uah_equiv") @db.Decimal(36, 2)
+  networkFeeUsdtTrc20   Decimal? @map("network_fee_usdt_trc20") @db.Decimal(36, 18)
+  networkFeeUsdtErc20   Decimal? @map("network_fee_usdt_erc20") @db.Decimal(36, 18)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  inputAsset  Asset  @relation("PairInputAsset", fields: [inputAssetId], references: [id])
+  outputAsset Asset  @relation("PairOutputAsset", fields: [outputAssetId], references: [id])
+  quotes      Quote[]
+  orders      Order[]
+
+  @@unique([inputAssetId, outputAssetId])
+  @@map("exchange_pairs")
+}
+
+model PaymentMethod {
+  id            String           @id @default(uuid()) @db.Uuid
+  code          String           @unique
+  rail          String
+  assetId       String           @map("asset_id") @db.Uuid
+  direction     PaymentDirection
+  paymentFeePct Decimal          @default(0) @map("payment_fee_pct") @db.Decimal(8, 4)
+  providerKey   String           @map("provider_key")
+  config        Json             @default("{}")
+  enabled       Boolean          @default(false)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  asset          Asset   @relation(fields: [assetId], references: [id])
+  payinOrders    Order[] @relation("OrderPayinMethod")
+  payoutOrders   Order[] @relation("OrderPayoutMethod")
+
+  @@map("payment_methods")
+}
+
+model PlatformSettings {
+  id                     String   @id @default("default")
+  killSwitch             Boolean  @default(false) @map("kill_switch")
+  limits                 Json     @default("{}")
+  quoteTtlSeconds        Int      @default(120) @map("quote_ttl_seconds")
+  paymentWindowMinutes   Int      @default(30) @map("payment_window_minutes")
+  explainFeatureEnabled  Boolean  @default(true) @map("explain_feature_enabled")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+// --- Identity ---
+
+model Customer {
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String?           @unique
+  phone           String?           @unique
+  passwordHash    String?           @map("password_hash")
+  telegramUserId  String?           @unique @map("telegram_user_id")
+  kycStatus       KycStatus         @default(UNVERIFIED) @map("kyc_status")
+  locale          CustomerLocale?
+  status          CustomerStatus    @default(ACTIVE)
+  riskLevel       CustomerRiskLevel @default(DEFAULT) @map("risk_level")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  kycCases KycCase[]
+  quotes   Quote[]
+  orders   Order[]
+
+  @@map("customers")
+}
+
+model KycCase {
+  id                String    @id @default(uuid()) @db.Uuid
+  customerId        String    @map("customer_id") @db.Uuid
+  status            KycStatus @default(PENDING)
+  provider          String    @default("mock")
+  externalRef       String?   @map("external_ref")
+  submittedAt       DateTime? @map("submitted_at")
+  decidedAt         DateTime? @map("decided_at")
+  decidedByAdminId  String?   @map("decided_by_admin_id") @db.Uuid
+  decisionReason    String?   @map("decision_reason")
+  payloadRef        String?   @map("payload_ref")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  decidedByAdmin OperatorUser? @relation(fields: [decidedByAdminId], references: [id])
+
+  @@index([customerId, status])
+  @@map("kyc_cases")
+}
+
+model OperatorUser {
+  id           String         @id @default(uuid()) @db.Uuid
+  email        String         @unique
+  passwordHash String         @map("password_hash")
+  roles        OperatorRole[]
+  status       OperatorStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  kycDecisions          KycCase[]
+  confirmedPayments     Payment[]      @relation("PaymentConfirmedBy")
+  approvedPayouts       Payout[]       @relation("PayoutApprovedBy")
+  assignedExceptions    ExceptionCase[] @relation("ExceptionAssignee")
+
+  @@map("operator_users")
+}
+
+// --- Exchange flow ---
+
+model Quote {
+  id           String   @id @default(uuid()) @db.Uuid
+  customerId   String?  @map("customer_id") @db.Uuid
+  pairId       String   @map("pair_id") @db.Uuid
+  side         String
+  inputAsset   String   @map("input_asset")
+  outputAsset  String   @map("output_asset")
+  network      String?
+  inputAmount  Decimal  @map("input_amount") @db.Decimal(36, 18)
+  outputAmount Decimal  @map("output_amount") @db.Decimal(36, 18)
+  marketRate   Decimal  @map("market_rate") @db.Decimal(36, 18)
+  finalRate    Decimal  @map("final_rate") @db.Decimal(36, 18)
+  fees         Json     @default("{}")
+  ttlSeconds   Int      @default(120) @map("ttl_seconds")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  customer Customer?     @relation(fields: [customerId], references: [id])
+  pair     ExchangePair  @relation(fields: [pairId], references: [id])
+  orders   Order[]
+
+  @@map("quotes")
+}
+
+model Order {
+  id                 String      @id @default(uuid()) @db.Uuid
+  publicId           String      @unique @map("public_id")
+  customerId         String      @map("customer_id") @db.Uuid
+  quoteId            String      @map("quote_id") @db.Uuid
+  pairId             String      @map("pair_id") @db.Uuid
+  inputAsset         String      @map("input_asset")
+  outputAsset        String      @map("output_asset")
+  network            String?
+  inputAmount        Decimal     @map("input_amount") @db.Decimal(36, 18)
+  outputAmount       Decimal     @map("output_amount") @db.Decimal(36, 18)
+  marketRate         Decimal     @map("market_rate") @db.Decimal(36, 18)
+  finalRate          Decimal     @map("final_rate") @db.Decimal(36, 18)
+  fees               Json        @default("{}")
+  status             OrderStatus @default(CREATED)
+  payinMethodId      String?     @map("payin_method_id") @db.Uuid
+  payoutMethodId     String?     @map("payout_method_id") @db.Uuid
+  payoutDestination  Json?       @map("payout_destination")
+  expiresAt          DateTime?   @map("expires_at")
+  killSwitchAtCreate Boolean     @default(false) @map("kill_switch_at_create")
+  completedAt        DateTime?   @map("completed_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  quote        Quote          @relation(fields: [quoteId], references: [id])
+  pair         ExchangePair   @relation(fields: [pairId], references: [id])
+  payinMethod  PaymentMethod? @relation("OrderPayinMethod", fields: [payinMethodId], references: [id])
+  payoutMethod PaymentMethod? @relation("OrderPayoutMethod", fields: [payoutMethodId], references: [id])
+  payments     Payment[]
+  payouts      Payout[]
+  ledgerEntries LedgerEntry[]
+  auditEvents  AuditEvent[]
+  exception    ExceptionCase?
+
+  @@index([customerId, status])
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  orderId               String        @map("order_id") @db.Uuid
+  expectedAmount        Decimal       @map("expected_amount") @db.Decimal(36, 18)
+  asset                 String
+  network               String?
+  destination           Json
+  status                PaymentStatus @default(PENDING)
+  detectedAmount        Decimal?      @map("detected_amount") @db.Decimal(36, 18)
+  confirmedByOperatorId String?       @map("confirmed_by_operator_id") @db.Uuid
+  externalRef           String?       @map("external_ref")
+  idempotencyKey        String        @unique @map("idempotency_key")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  order               Order         @relation(fields: [orderId], references: [id])
+  confirmedByOperator OperatorUser? @relation("PaymentConfirmedBy", fields: [confirmedByOperatorId], references: [id])
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model Payout {
+  id                   String       @id @default(uuid()) @db.Uuid
+  orderId              String       @map("order_id") @db.Uuid
+  amount               Decimal      @db.Decimal(36, 18)
+  asset                String
+  network              String?
+  destination          Json
+  status               PayoutStatus @default(PENDING)
+  approvedByOperatorId String?      @map("approved_by_operator_id") @db.Uuid
+  provider             String?
+  externalRef          String?      @map("external_ref")
+  idempotencyKey       String       @unique @map("idempotency_key")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+
+  order              Order         @relation(fields: [orderId], references: [id])
+  approvedByOperator OperatorUser? @relation("PayoutApprovedBy", fields: [approvedByOperatorId], references: [id])
+
+  @@index([orderId])
+  @@map("payouts")
+}
+
+model LedgerEntry {
+  id             String   @id @default(uuid()) @db.Uuid
+  orderId        String?  @map("order_id") @db.Uuid
+  account        String
+  amount         Decimal  @db.Decimal(36, 18)
+  asset          String
+  entryType      String   @map("entry_type")
+  idempotencyKey String   @unique @map("idempotency_key")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([account, asset])
+  @@map("ledger_entries")
+}
+
+model AuditEvent {
+  id        String    @id @default(uuid()) @db.Uuid
+  actorType ActorType @map("actor_type")
+  actorId   String?   @map("actor_id")
+  orderId   String?   @map("order_id") @db.Uuid
+  action    String
+  payload   Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
+  @@map("audit_events")
+}
+
+model ExceptionCase {
+  id                 String          @id @default(uuid()) @db.Uuid
+  orderId            String          @unique @map("order_id") @db.Uuid
+  reason             String
+  status             ExceptionStatus @default(OPEN)
+  assigneeOperatorId String?         @map("assignee_operator_id") @db.Uuid
+  resolutionNotes    String?         @map("resolution_notes")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  order            Order         @relation(fields: [orderId], references: [id])
+  assigneeOperator OperatorUser? @relation("ExceptionAssignee", fields: [assigneeOperatorId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("exception_cases")
+}
