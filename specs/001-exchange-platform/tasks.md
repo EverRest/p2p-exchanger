@@ -40,13 +40,13 @@
 ### Tests (TDD — money primitives)
 
 - [ ] T009 [P] Add failing unit tests for `Money` VO (no JS number; currency match) in `backend/src/shared/domain/money/money.spec.ts`
-- [ ] T010 [P] Add failing unit tests for **Assisted** order state machine allowlist (incl. `PAYOUT_APPROVED`; operator confirm/approve transitions) in `backend/src/orders/domain/order-state-machine.spec.ts`
+- [x] T010 [P] Add failing unit tests for **Assisted** order state machine allowlist (incl. `PAYOUT_APPROVED`; operator confirm/approve transitions) in `backend/src/orders/domain/order-state-machine.spec.ts`
 - [ ] T011 [P] Add failing unit tests for ledger idempotency key uniqueness behavior in `backend/src/ledger/application/ledger.service.spec.ts`
 
 ### Implementation
 
 - [ ] T012 Implement `Money` value object in `backend/src/shared/domain/money/money.ts` (make T009 pass)
-- [ ] T013 Implement **Assisted** order state machine in `backend/src/orders/domain/order-state-machine.ts` (make T010 pass)
+- [x] T013 Implement **Assisted** order state machine in `backend/src/orders/domain/order-state-machine.ts` (make T010 pass)
 - [ ] T014 Create Prisma schema skeleton (Customer, **KycCase**, Asset refs, ExchangePair, PaymentMethod, Quote, Order, Payment, Payout, LedgerEntry, AuditEvent, ExceptionCase, OperatorUser, PlatformSettings) in `backend/prisma/schema.prisma`
 - [ ] T015 Run initial migration + `prisma generate`; document in `backend/prisma/migrations/`
 - [ ] T016 Implement Prisma module + transactional helper in `backend/src/shared/prisma/`
